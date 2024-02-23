@@ -5,13 +5,26 @@
 
 
 /*
-// When triggered, send the startup code STARTUP_CODE_COUNT times,
-// then send the running code as long as the trigger is asserted.
-// To minimize the chance of repeated interference with another
-// transmitter, The time between codes is randomly chosen from an
-// interval.
-// When the trigger is no longer asserted, go to sleep.
-*/
+ * Pin PB0 is an input, and is triggered (active low) when the current
+ * sensor detects acurrent draw above a threshold value.
+ * Pins PB1 to PB4 are outputs connected to the 4-bit transmitter module.
+ * While the trigger is asserted, we send a code repeatedly, with a random
+ * interval between repeats. Initially, we send STARTUP_CODE a small number
+ * of times, and then send RUNNING_CODE as long as the trigger remains
+ * asserted.
+ * 
+ * The transmitter takes approximately 18ms to send a code word. The interval
+ * between codes is randomly chosen between 350ms and 650ms. The random time
+ * interval between transmissions is a simple protocol intended to reduce the
+ * probability of repeated collissions (which are undetectable) when multiple
+ * transmitters are active at the same time.
+ * 
+ * The receiver can distinguish between STARTUP_CODE and RUNNING_CODE, but
+ * cannot identify which transmitter is sending codes, or even how many different
+ * transmitters are active.
+ * 
+ * When the trigger is no longer asserted, we go to sleep.
+ */
 
 const int TRIGGER_PIN = 0;  // PB0
 const int A_PIN = 1;        // PB1
@@ -69,12 +82,8 @@ void setup() {
   // Turn off voltage reference
   ACSR &= ~(1<<ACBG);
 
-  // Set pin modes
-  pinMode(TRIGGER_PIN, INPUT);
-  pinMode(A_PIN, OUTPUT);
-  pinMode(B_PIN, OUTPUT);
-  pinMode(C_PIN, OUTPUT);
-  pinMode(D_PIN, OUTPUT);
+  // Set pin modes: PB0 input, PB1-PB4 output
+  DDRB |= 0b00011110;
   codeOff();
 
   // Configure pin change interrupt
@@ -121,9 +130,6 @@ void sleep()
   cli();                                  // Disable interrupts
   sleep_disable();                        // Clear SE bit
 
-  // Turn on voltage reference
-  ACSR |= (1<<ACBG);
-
   sei();                                  // Enable interrupts
 }
 
@@ -137,6 +143,7 @@ void shutdown() {
 
 }
 
+// Pin change interrupt
 ISR(PCINT0_vect) {
   int pin = digitalRead(TRIGGER_PIN);
   triggered = (pin == LOW);
