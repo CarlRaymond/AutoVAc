@@ -41,8 +41,8 @@ const byte CODE_MASK = 0b1111;
 const int INTERVAL_MIN = 350; // milliseconds
 const int INTERVAL_MAX = 650; // milliseconds
 
-int startupCodeCounter = 0;
-bool triggered = false;
+volatile int startupCodeCounter = 0;
+volatile bool triggered = false;
 bool justAwoke = false;
 
 void waitInterval(uint16_t minMillis, uint16_t maxMillis);
@@ -129,16 +129,17 @@ void sleep()
   // Now we are awake again!
   cli();                                  // Disable interrupts
   sleep_disable();                        // Clear SE bit
-
   sei();                                  // Enable interrupts
 }
 
 // Called when first triggered to prepare for startup.
+// Invoked by interrupt routine; any global variables changed should be declared volatile.
 void startup() {
   startupCodeCounter = STARTUP_CODE_COUNT;
 }
 
 // Called when trigger released to prepart for shutdown.
+// Invoked by interrupt routine; any global variables changed should be declared volatile.
 void shutdown() {
 
 }
