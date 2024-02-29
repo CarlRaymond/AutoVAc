@@ -40,7 +40,8 @@ const byte CODE_MASK = 0b1111;
 // Transmit interval is 500ms +- 150ms
 const int INTERVAL_MIN = 350; // milliseconds
 const int INTERVAL_MAX = 650; // milliseconds
-
+const int BIT_ON_TIME = 45; // milliseconds
+const int INTERBIT_INTERVAL = 265;
 volatile int startupCodeCounter = 0;
 volatile bool triggered = false;
 bool justAwoke = false;
@@ -65,16 +66,18 @@ void waitInterval(uint16_t min, uint16_t max)
 void codeOn(byte code) {
   // Assume all bits are currently zero.
 
-  // Turn on code bits
-  PORTB |= (code << 1);
+  // Turn on code bits. Active low.
+  byte bits = (code & CODE_MASK) << 1;
+  byte invBits = ~bits;
+  PORTB = invBits;
 }
 
 void codeOff() {
   // Possibly wait here
   // ...
 
-  // Turn off all code bits
-  PORTB &= ~(CODE_MASK << 1);
+  // Turn off (HIGH) all code bits.
+  PORTB = (CODE_MASK << 1);
 }
 
 void setup() {
@@ -83,33 +86,57 @@ void setup() {
   ACSR &= ~(1<<ACBG);
 
   // Set pin modes: PB0 input, PB1-PB4 output
-  DDRB |= 0b00011110;
+  DDRB = 0b00011110;
   codeOff();
 
   // Configure pin change interrupt
   PCMSK = _BV(PCINT0);       // Only PB0 raises interrupt
   GIMSK |= _BV(PCIE);        // Enable Pin Change Interrupts
+  sei();
 
   // Take a nap until something happens.
-  sleep();
+  //sleep();
+
+  // Startup test
+  for (int i=0; i<5;  i++) {
+    codeOn(0b0001);
+    delay(BIT_ON_TIME);
+    codeOff();
+    delay(INTERBIT_INTERVAL);
+    codeOn(0b0010);
+    delay(BIT_ON_TIME);
+    codeOff();
+    delay(INTERBIT_INTERVAL);
+    codeOn(0b0100);
+    delay(BIT_ON_TIME);
+    codeOff();
+    delay(INTERBIT_INTERVAL);
+    codeOn(0b1000);
+    delay(BIT_ON_TIME);
+    codeOff();
+    delay(INTERBIT_INTERVAL);
+    codeOff();
+  }
 }
 
 void loop() {
   while (triggered) {
     if (startupCodeCounter > 0) {
       codeOn(STARTUP_CODE);
+      delay(BIT_ON_TIME);
       codeOff();
       startupCodeCounter--;
     }
     else {
       codeOn(RUNNING_CODE);
+      delay(BIT_ON_TIME);
       codeOff();
     }
 
     waitInterval(INTERVAL_MIN, INTERVAL_MAX);
   }
 
-  sleep();
+  //sleep();
 }
 
 void sleep()
