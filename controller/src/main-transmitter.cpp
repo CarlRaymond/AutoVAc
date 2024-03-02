@@ -52,8 +52,8 @@ void codeOff();
 void setup();
 void loop();
 void sleep();
-void startup();
-void shutdown();
+void triggerOn();
+void triggerOff();
 
 // Wait a random length of time between min and max milliseconds.
 void waitInterval(uint16_t min, uint16_t max)
@@ -159,15 +159,15 @@ void sleep()
   sei();                                  // Enable interrupts
 }
 
-// Called when first triggered to prepare for startup.
+// Called when first triggered to prepare for triggerOn.
 // Invoked by interrupt routine; any global variables changed should be declared volatile.
-void startup() {
+void triggerOn() {
   startupCodeCounter = STARTUP_CODE_COUNT;
 }
 
-// Called when trigger released to prepart for shutdown.
+// Called when trigger released.
 // Invoked by interrupt routine; any global variables changed should be declared volatile.
-void shutdown() {
+void triggerOff() {
 
 }
 
@@ -177,9 +177,9 @@ ISR(PCINT0_vect) {
   triggered = (pin == LOW);
 
   if (triggered) {
-    startup();
+    triggerOn();
   }
   else {
-    shutdown();
+    triggerOff();
   }
 }
