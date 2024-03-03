@@ -3,6 +3,7 @@
 #include <avr/interrupt.h>
 #include <avr/power.h>
 
+#include "codes.h"
 
 /*
  * Pin PB0 is an input, and is triggered (active low) when the current
@@ -32,17 +33,14 @@ const int B_PIN = 2;        // PB2
 const int C_PIN = 3;        // PB3
 const int D_PIN = 4;        // PB4
 
-const byte STARTUP_CODE = 0b1011;
-const int STARTUP_CODE_COUNT = 3;
-const byte RUNNING_CODE = 0b1001;
-const byte CODE_MASK = 0b1111;
 
-// Transmit interval is 500ms +- 150ms
-const int INTERVAL_MIN = 750; // milliseconds
+// Transmit interval is 1500ms +- 500ms
+const int INTERVAL_MIN = 1000; // milliseconds
 const int INTERVAL_MAX = 2000; // milliseconds
 const int BIT_ON_TIME = 45; // milliseconds
 const int INTERBIT_INTERVAL = 265;
 volatile int startupCodeCounter = 0;
+const int STARTUP_CODE_COUNT = 3;
 volatile bool triggered = false;
 bool justAwoke = false;
 
