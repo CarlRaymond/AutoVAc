@@ -38,8 +38,8 @@ const byte RUNNING_CODE = 0b1001;
 const byte CODE_MASK = 0b1111;
 
 // Transmit interval is 500ms +- 150ms
-const int INTERVAL_MIN = 350; // milliseconds
-const int INTERVAL_MAX = 650; // milliseconds
+const int INTERVAL_MIN = 750; // milliseconds
+const int INTERVAL_MAX = 2000; // milliseconds
 const int BIT_ON_TIME = 45; // milliseconds
 const int INTERBIT_INTERVAL = 265;
 volatile int startupCodeCounter = 0;
@@ -48,12 +48,13 @@ bool justAwoke = false;
 
 void waitInterval(uint16_t minMillis, uint16_t maxMillis);
 void codeOn(byte code);
-void codeOff();
-void setup();
-void loop();
-void sleep();
-void triggerOn();
-void triggerOff();
+void codeOff(void);
+void setup(void);
+void loop(void);
+void sleep(void);
+void triggerOn(void);
+void triggerOff(void);
+void readTrigger(void);
 
 // Wait a random length of time between min and max milliseconds.
 void waitInterval(uint16_t min, uint16_t max)
@@ -117,6 +118,8 @@ void setup() {
     delay(INTERBIT_INTERVAL);
     codeOff();
   }
+
+  readTrigger();
 }
 
 void loop() {
@@ -171,8 +174,7 @@ void triggerOff() {
 
 }
 
-// Pin change interrupt
-ISR(PCINT0_vect) {
+void readTrigger() {
   int pin = digitalRead(TRIGGER_PIN);
   triggered = (pin == LOW);
 
@@ -182,4 +184,10 @@ ISR(PCINT0_vect) {
   else {
     triggerOff();
   }
+
+}
+
+// Pin change interrupt
+ISR(PCINT0_vect) {
+  readTrigger();
 }
