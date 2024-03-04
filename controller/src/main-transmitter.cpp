@@ -62,11 +62,11 @@ void waitInterval(uint16_t min, uint16_t max)
   delay(time);
 }
 
-void codeOn(byte code) {
+void codeOn(Code c) {
   // Assume all bits are currently zero.
 
   // Turn on code bits. Active low.
-  byte bits = (code & CODE_MASK) << 1;
+  byte bits = ((byte)c & CODE_MASK) << 1;
   byte invBits = ~bits;
   PORTB = invBits;
 }
@@ -76,7 +76,7 @@ void codeOff() {
   // ...
 
   // Turn off (HIGH) all code bits.
-  PORTB = (CODE_MASK << 1);
+  PORTB = (byte)Code::MASK << 1;
 }
 
 void setup() {
@@ -98,19 +98,19 @@ void setup() {
 
   // Startup test
   for (int i=0; i<5;  i++) {
-    codeOn(0b0001);
+    codeOn(Code::A);
     delay(BIT_ON_TIME);
     codeOff();
     delay(INTERBIT_INTERVAL);
-    codeOn(0b0010);
+    codeOn(Code::B);
     delay(BIT_ON_TIME);
     codeOff();
     delay(INTERBIT_INTERVAL);
-    codeOn(0b0100);
+    codeOn(Code::C);
     delay(BIT_ON_TIME);
     codeOff();
     delay(INTERBIT_INTERVAL);
-    codeOn(0b1000);
+    codeOn(Code::D);
     delay(BIT_ON_TIME);
     codeOff();
     delay(INTERBIT_INTERVAL);
@@ -123,13 +123,13 @@ void setup() {
 void loop() {
   while (triggered) {
     if (startupCodeCounter > 0) {
-      codeOn(STARTUP_CODE);
+      codeOn(Code::STARTING);
       delay(BIT_ON_TIME);
       codeOff();
       startupCodeCounter--;
     }
     else {
-      codeOn(RUNNING_CODE);
+      codeOn(Code::RUNNING);
       delay(BIT_ON_TIME);
       codeOff();
     }
