@@ -14,7 +14,9 @@ enum class Code : unsigned char {
     MASK     = 0b1111,
 
     // Pseudo-codes corresponding to timer events
-    TIMEOUT  = 0b00010000
+    STARTING_TIMEOUT  = 0b00010000,
+    RUNNING_TIMEOUT   = 0b00010001,
+    QUIET_TIMEOUT     = 0b00010010
 };
 
 bool isValidCode(Code c);

@@ -10,32 +10,31 @@
 */
 
 const int OUTPUT_PIN = 0;   // PB0
-const int A_PIN = 1;        // PB1
-const int B_PIN = 2;        // PB2
-const int C_PIN = 3;        // PB3
-const int D_PIN = 4;        // PB4
-
-// Recevied code state machine. A code is considered received when the state goes from VALID_CODE back
-// to READY.
-enum class ReceiverState : unsigned char { READY, VALID_CODE, INVALID_CODE };
-volatile ReceiverState currentReceiverState = ReceiverState::READY;
-volatile ReceiverState priorReceiverState = ReceiverState::READY;
 
 // Output state machine.
-enum class OutputState : unsigned char { OFF, STARTING, RUNNING };
-volatile OutputState currentOutputState = OutputState::OFF;
-volatile OutputState priorOutputState = OutputState::OFF;
+enum class MotorState : unsigned char { OFF, STARTING, RUNNING };
+volatile MotorState currentOutputState = MotorState::OFF;
+volatile MotorState priorOutputState = MotorState::OFF;
 
-const unsigned long MAX_RUN_INTERVAL = 10000;  // 15 minutes, in milliseconds
+// Transition from STARTING to RUNNING after this interval
+const unsigned long MAX_STARTING_INTERVAL = 5000;
+
+// Transition from RUNNING to OFF after this interval;
+const unsigned long MAX_RUNNING_INTERVAL = 60000; // 900000; 15 minutes, in milliseconds
+
+// Transition from RUNNING to OFF after this interval when no STARTING or RUNNING codes
+// are received
 const unsigned long MAX_QUIET_INTERVAL = 5000;
-const unsigned long STARTUP_INTERVAL = 5000;
 
-volatile unsigned long outputStartTime = 0;
+volatile unsigned long motorStartTime = 0;
+volatile unsigned long runningCodeReceivedTime = millis();
+volatile unsigned long anyCodeReceivedTime = millis();
 
+// Function declarations
 void setup(void);
 void loop(void);
 void newInput(Code);
-void newOutputState(OutputState);
+void newMotorState(MotorState);
 void turnOff(void);
 void turnOn(void);
 
@@ -74,50 +73,59 @@ void setup() {
   turnOff();
 }
 
-// Set last code time to long ago so we start up off.
-unsigned long last_code_time = millis() + 1000000;
 
-// Loop's job is to process timeouts.
+// Loop's job is to process timeouts. When a timeout occurrs, insert a
+// pseudocode into the codestream.
 void loop() {
 
-  // See if we've been running too long
-  if (currentOutputState != OutputState::OFF) {
-    if (millis() - outputStartTime > MAX_RUN_INTERVAL) {
-      newInput(Code::TIMEOUT);
+  unsigned long now = millis();
+  if (currentOutputState != MotorState::OFF) {
+    // Time to transition from STARTING to RUNNING?
+    if (now - motorStartTime > MAX_STARTING_INTERVAL) {
+      newInput(Code::STARTING_TIMEOUT);
+    }
+    // See if we've been running too long
+    if (now - motorStartTime > MAX_RUNNING_INTERVAL) {
+      newInput(Code::RUNNING_TIMEOUT);
+    }
+    // Have transmitters all gone silent?
+    if (now - runningCodeReceivedTime > MAX_QUIET_INTERVAL) {
+      newInput(Code::STOP);
     }
   }
 }
 
-// Invoked by ISR on each change to the inputs. Advances the receiver state machine.
-void newInput(Code c) {
-  static Code priorCode = Code::NONE;
+// Invoked by ISR on each change to the inputs, and by loop on timeouts.
+// Advances the receiver state machine.
+void newInput(Code currentCode) {
 
-  switch (priorCode) {
-    case Code::NONE:
-      switch (c) {
-        case Code::START:
-          newOutputState(OutputState::RUNNING);
-          outputStartTime = millis();
-          break;
+  switch (currentCode) {
+    case Code::START:
+      newMotorState(MotorState::STARTING);
+      break;
 
-        case Code::STOP:
-        case Code::TIMEOUT:
-          newOutputState(OutputState::OFF);
-          break;
+    case Code::STARTING_TIMEOUT:
+      newMotorState(MotorState::RUNNING);
+      break;
 
-        default:
-          break;
-      }
+    case Code::STOP:
+    case Code::RUNNING_TIMEOUT:
+    case Code::QUIET_TIMEOUT:
+      newMotorState(MotorState::OFF);
+      break;
+
+    case Code::RUNNING:
+    case Code::STARTING:
+      runningCodeReceivedTime = millis();
       break;
 
     default:
       break;
   }
 
-  priorCode = c;
 }
 
-void newOutputState(OutputState s) {
+void newMotorState(MotorState s) {
 
   if (s == priorOutputState)
     return;
@@ -125,12 +133,14 @@ void newOutputState(OutputState s) {
   priorOutputState = currentOutputState;
   currentOutputState = s;
   switch (s) {
-    case OutputState::OFF:
+    case MotorState::OFF:
       turnOff();
       break;
 
-    case OutputState::RUNNING:
+    case MotorState::STARTING:
+    case MotorState::RUNNING:
       turnOn();
+      motorStartTime = millis();
       break;
 
     default:
@@ -138,19 +148,19 @@ void newOutputState(OutputState s) {
   }
 }
 
-void turnOn() {
+void inline turnOn() {
   PORTB |= _BV(PINB0);
 }
 
-void turnOff() {
+void inline turnOff() {
   PORTB &= ~_BV(PINB0);
 }
 
 // Pin change interrupt. Invoked on change to any input bit.
 ISR(PCINT0_vect) {
-  
+
   // Delay to allow all bits to settle if the receiver doesn't set them all at once.
-  delay(10);
+  delay(1);
   Code c = (Code) ((PINB & 0b00011110) >> 1);
 
   // If code is invalid, just eat it.
