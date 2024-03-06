@@ -12,7 +12,7 @@
 const int OUTPUT_PIN = 0;   // PB0
 
 // Output state machine.
-enum class MotorState : unsigned char { OFF, STARTING, RUNNING };
+enum class MotorState : unsigned char { OFF, RUNNING };
 volatile MotorState currentOutputState = MotorState::OFF;
 volatile MotorState priorOutputState = MotorState::OFF;
 
@@ -20,7 +20,7 @@ volatile MotorState priorOutputState = MotorState::OFF;
 const unsigned long MAX_STARTING_INTERVAL = 5000;
 
 // Transition from RUNNING to OFF after this interval;
-const unsigned long MAX_RUNNING_INTERVAL = 60000; // 900000; 15 minutes, in milliseconds
+const unsigned long MAX_RUNNING_INTERVAL = 180000; // 3 minutes for testing // 900000; 15 minutes, in milliseconds
 
 // Transition from RUNNING to OFF after this interval when no STARTING or RUNNING codes
 // are received
@@ -101,7 +101,9 @@ void newInput(Code currentCode) {
 
   switch (currentCode) {
     case Code::START:
-      newMotorState(MotorState::STARTING);
+    case Code::STARTING:
+      newMotorState(MotorState::RUNNING);
+      runningCodeReceivedTime = millis();
       break;
 
     case Code::STARTING_TIMEOUT:
@@ -115,7 +117,6 @@ void newInput(Code currentCode) {
       break;
 
     case Code::RUNNING:
-    case Code::STARTING:
       runningCodeReceivedTime = millis();
       break;
 
@@ -127,25 +128,23 @@ void newInput(Code currentCode) {
 
 void newMotorState(MotorState s) {
 
-  if (s == priorOutputState)
+  if (s == currentOutputState)
     return;
 
-  priorOutputState = currentOutputState;
   currentOutputState = s;
+
   switch (s) {
     case MotorState::OFF:
       turnOff();
       break;
 
-    case MotorState::STARTING:
     case MotorState::RUNNING:
-      turnOn();
       motorStartTime = millis();
-      break;
-
-    default:
+      turnOn();
       break;
   }
+
+  priorOutputState = currentOutputState;
 }
 
 void inline turnOn() {
