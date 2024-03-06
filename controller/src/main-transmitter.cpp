@@ -66,7 +66,7 @@ void codeOn(Code c) {
   // Assume all bits are currently zero.
 
   // Turn on code bits. Active low.
-  byte bits = ((byte)c & CODE_MASK) << 1;
+  byte bits = ((byte)c & (byte)Code::MASK) << 1;
   byte invBits = ~bits;
   PORTB = invBits;
 }
@@ -98,14 +98,6 @@ void setup() {
 
   // Startup test
   for (int i=0; i<5;  i++) {
-    codeOn(Code::A);
-    delay(BIT_ON_TIME);
-    codeOff();
-    delay(INTERBIT_INTERVAL);
-    codeOn(Code::B);
-    delay(BIT_ON_TIME);
-    codeOff();
-    delay(INTERBIT_INTERVAL);
     codeOn(Code::C);
     delay(BIT_ON_TIME);
     codeOff();
@@ -114,7 +106,6 @@ void setup() {
     delay(BIT_ON_TIME);
     codeOff();
     delay(INTERBIT_INTERVAL);
-    codeOff();
   }
 
   readTrigger();
