@@ -97,7 +97,15 @@ void setup() {
   //sleep();
 
   // Startup test
-  for (int i=0; i<5;  i++) {
+  for (int i=0; i<3;  i++) {
+    codeOn(Code::A);
+    delay(BIT_ON_TIME);
+    codeOff();
+    delay(INTERBIT_INTERVAL);
+    codeOn(Code::B);
+    delay(BIT_ON_TIME);
+    codeOff();
+    delay(INTERBIT_INTERVAL);
     codeOn(Code::C);
     delay(BIT_ON_TIME);
     codeOff();

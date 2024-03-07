@@ -4,7 +4,7 @@
 
 /*
  * Pin PB0 is the output, active high.
- * Pins PB1-PB4 are inputs from the RF receiver. While valid codes are received on
+ * Pins PA0-PA3 are inputs from the RF receiver. While valid codes are received on
  * the inputs, the output will be held high. When valid codes are not seen for an
  * interval of time, the output will switch off.
 */
@@ -44,15 +44,16 @@ void setup() {
   // Turn off voltage reference
   ACSR &= ~(1<<ACBG);
 
-  // Set pin modes: PB0 output, PB1-PB4 input
+  // Set pin modes: PB0 output
+  DDRA = 0b00000000;
   DDRB = 0b00000001;
 
   // Turn off output
   PORTB = 0b00000000;
 
-  // Configure pin change interrupt on PORTB bits 1-4
-  PCMSK = _BV(PCINT1) | _BV(PCINT2) | _BV(PCINT3) | _BV(PCINT4);
-  GIMSK |= _BV(PCIE);        // Enable Pin Change Interrupts
+  // Configure pin change interrupt on PORTA bits 0-3
+  PCMSK0 =  _BV(PCINT0) | _BV(PCINT1) | _BV(PCINT2) | _BV(PCINT3);
+  GIMSK |= _BV(PCIE0);        // Enable Pin Change Interrupts
   sei();
 
   // Toggle LED
@@ -160,7 +161,7 @@ ISR(PCINT0_vect) {
 
   // Delay to allow all bits to settle if the receiver doesn't set them all at once.
   delay(1);
-  Code c = (Code) ((PINB & 0b00011110) >> 1);
+  Code c = (Code) (PINA & 0b00001111);
 
   // If code is invalid, just eat it.
   if (isValidCode(c)) {
