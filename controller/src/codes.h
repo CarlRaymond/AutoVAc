@@ -3,12 +3,12 @@ enum class Code : unsigned char {
 
     // Codes corresponding to pin inputs
     NONE     = 0b0000,
-    A        = 0b1000,
-    START    = 0b1000,
-    B        = 0b0100,
-    STOP     = 0b0100,
-    C        = 0b0010,
-    D        = 0b0001,
+    A        = 0b0001,
+    START    = 0b0001,
+    B        = 0b0010,
+    STOP     = 0b0010,
+    C        = 0b0100,
+    D        = 0b1000,
     STARTING = 0b1011,
     RUNNING  = 0b1010,
     MASK     = 0b1111,
