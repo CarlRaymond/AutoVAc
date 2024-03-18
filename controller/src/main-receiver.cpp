@@ -3,6 +3,7 @@
 #include "codes.h"
 
 /*
+ * Runs on ATTiny84
  * Pin PB0 is the output, active high.
  * Pins PA0-PA3 are inputs from the RF receiver. While valid codes are received on
  * the inputs, the output will be held high. When valid codes are not seen for an
@@ -12,19 +13,18 @@
 const int OUTPUT_PIN = 0;   // PB0
 
 // Output state machine.
-enum class MotorState : unsigned char { OFF, RUNNING };
+enum class MotorState : unsigned char { OFF, MANUAL_RUN, AUTO_RUN };
 volatile MotorState currentOutputState = MotorState::OFF;
 volatile MotorState priorOutputState = MotorState::OFF;
 
-// Transition from STARTING to RUNNING after this interval
-const unsigned long MAX_STARTING_INTERVAL = 5000;
+// Transition from MANUAL_RUN to OFF after this interval;
+const unsigned long SHUTOFF_INTERVAL = 180000;  // 3 minutes for testing // 1200000; 20 minutes, in milliseconds
 
-// Transition from RUNNING to OFF after this interval;
-const unsigned long MAX_RUNNING_INTERVAL = 180000; // 3 minutes for testing // 900000; 15 minutes, in milliseconds
+// Max interval allowed between codes in a multi-code sequnce
+const unsigned long CODE_SEQ_INTERVAL = 1000;
 
-// Transition from RUNNING to OFF after this interval when no STARTING or RUNNING codes
-// are received
-const unsigned long MAX_QUIET_INTERVAL = 5000;
+// Interval after hearing no activity from tool transmitters
+const unsigned long QUIET_INTERVAL = 5000;
 
 volatile unsigned long motorStartTime = 0;
 volatile unsigned long runningCodeReceivedTime = millis();
@@ -37,7 +37,6 @@ void newInput(Code);
 void newMotorState(MotorState);
 void turnOff(void);
 void turnOn(void);
-
 
 
 void setup() {
@@ -81,17 +80,20 @@ void loop() {
 
   unsigned long now = millis();
   if (currentOutputState != MotorState::OFF) {
-    // Time to transition from STARTING to RUNNING?
-    if (now - motorStartTime > MAX_STARTING_INTERVAL) {
-      newInput(Code::STARTING_TIMEOUT);
+
+    // Heard any good codes lately?
+    if (now - anyCodeReceivedTime > CODE_SEQ_INTERVAL) {
+      newInput(Code::CODE_SEQ_TIMEOUT);
     }
+
     // See if we've been running too long
-    if (now - motorStartTime > MAX_RUNNING_INTERVAL) {
-      newInput(Code::RUNNING_TIMEOUT);
+    if (now - motorStartTime > SHUTOFF_INTERVAL) {
+      newInput(Code::SHUTOFF_TIMEOUT);
     }
+
     // Have transmitters all gone silent?
-    if (now - runningCodeReceivedTime > MAX_QUIET_INTERVAL) {
-      newInput(Code::STOP);
+    if (now - runningCodeReceivedTime > QUIET_INTERVAL) {
+      newInput(Code::TOOL_QUIET_TIMEOUT);
     }
   }
 }
@@ -102,22 +104,18 @@ void newInput(Code currentCode) {
 
   switch (currentCode) {
     case Code::START:
-    case Code::STARTING:
-      newMotorState(MotorState::RUNNING);
+    case Code::TOOL_STARTING:
+      newMotorState(MotorState::MANUAL_RUN);
       runningCodeReceivedTime = millis();
       break;
 
-    case Code::STARTING_TIMEOUT:
-      newMotorState(MotorState::RUNNING);
-      break;
-
     case Code::STOP:
-    case Code::RUNNING_TIMEOUT:
-    case Code::QUIET_TIMEOUT:
+    case Code::TOOL_QUIET_TIMEOUT:
+    case Code::SHUTOFF_TIMEOUT:
       newMotorState(MotorState::OFF);
       break;
 
-    case Code::RUNNING:
+    case Code::TOOL_RUNNING:
       runningCodeReceivedTime = millis();
       break;
 
@@ -139,11 +137,15 @@ void newMotorState(MotorState s) {
       turnOff();
       break;
 
-    case MotorState::RUNNING:
-      motorStartTime = millis();
-      turnOn();
+    case MotorState::AUTO_RUN:
+    case MotorState::MANUAL_RUN:
+      if (currentOutputState == (MotorState::OFF)) {
+        motorStartTime = millis();
+        turnOn();
+      }
       break;
   }
+
 
   priorOutputState = currentOutputState;
 }

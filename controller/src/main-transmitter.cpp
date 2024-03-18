@@ -98,19 +98,19 @@ void setup() {
 
   // Startup test
   for (int i=0; i<3;  i++) {
-    codeOn(Code::A);
+    codeOn(Code::BUTTON_A);
     delay(BIT_ON_TIME);
     codeOff();
     delay(INTERBIT_INTERVAL);
-    codeOn(Code::B);
+    codeOn(Code::BUTTON_B);
     delay(BIT_ON_TIME);
     codeOff();
     delay(INTERBIT_INTERVAL);
-    codeOn(Code::C);
+    codeOn(Code::BUTTON_C);
     delay(BIT_ON_TIME);
     codeOff();
     delay(INTERBIT_INTERVAL);
-    codeOn(Code::D);
+    codeOn(Code::BUTTON_D);
     delay(BIT_ON_TIME);
     codeOff();
     delay(INTERBIT_INTERVAL);
@@ -122,13 +122,13 @@ void setup() {
 void loop() {
   while (triggered) {
     if (startupCodeCounter > 0) {
-      codeOn(Code::STARTING);
+      codeOn(Code::TOOL_STARTING);
       delay(BIT_ON_TIME);
       codeOff();
       startupCodeCounter--;
     }
     else {
-      codeOn(Code::RUNNING);
+      codeOn(Code::TOOL_RUNNING);
       delay(BIT_ON_TIME);
       codeOff();
     }

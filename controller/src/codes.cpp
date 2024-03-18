@@ -3,12 +3,13 @@
 bool isValidCode(Code c) {
     switch (c) {
         //case Code::NONE:
-        case Code::STARTING:
-        case Code::RUNNING:
+        case Code::TOOL_STARTING:
+        case Code::TOOL_RUNNING:
         case Code::START:
         case Code::STOP:
-        case Code::STARTING_TIMEOUT:
-        case Code::RUNNING_TIMEOUT:
+        case Code::CODE_SEQ_TIMEOUT:
+        case Code::TOOL_QUIET_TIMEOUT:
+        case Code::SHUTOFF_TIMEOUT:
             return true;
     }
     return false;
